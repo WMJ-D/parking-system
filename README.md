@@ -2,6 +2,34 @@
 
 Vue3 + Element Plus 前端 / Express + MySQL 后端的小区停车管理系统，内置 25 套主题可随时切换（默认玻璃拟态）。
 
+## 界面预览
+
+**登录页**
+
+![登录页](docs/screenshots/login.jpg)
+
+**数据看板与 AI 助手左右分栏**
+
+| 数据看板 | AI 助手（展开后左侧系统自动收缩） |
+|---|---|
+| ![数据看板](docs/screenshots/dashboard.jpg) | ![AI 分栏](docs/screenshots/ai-split.jpg) |
+
+**AI 对话：数据查询与报表导出**
+
+| 自然语言查询车位数据 | 对话触发 Excel 下载 |
+|---|---|
+| ![AI 查询](docs/screenshots/ai-chat.jpg) | ![AI 导出](docs/screenshots/ai-export.jpg) |
+
+**业务管理**
+
+| 车位管理（车位图） | 车辆管理 |
+|---|---|
+| ![车位管理](docs/screenshots/spots.jpg) | ![车辆管理](docs/screenshots/vehicles.jpg) |
+
+| 报表中心 | 操作日志（支持导出 Excel） |
+|---|---|
+| ![报表中心](docs/screenshots/reports.jpg) | ![操作日志](docs/screenshots/logs.jpg) |
+
 ## 主题系统
 
 顶栏右侧调色板按钮打开主题面板（按浅色 / 深色分组，25 套），点击即切换，选择记在 `localStorage` 的 `app-theme` 上，登录页同步跟随。
