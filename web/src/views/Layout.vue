@@ -2,7 +2,7 @@
   <el-container class="layout">
     <el-aside :width="isCollapse ? '72px' : '220px'" class="aside" :class="{ 'is-collapsed': isCollapse }">
       <div class="brand">
-        <div class="brand-icon"><el-icon :size="20"><Van /></el-icon></div>
+        <div class="brand-icon"><img src="/logo.svg" alt="智泊停车" /></div>
         <span v-show="!isCollapse" class="brand-text">智泊停车</span>
       </div>
       <el-menu
@@ -182,10 +182,12 @@ async function changePwd() {
 .aside.is-collapsed .brand { justify-content: center; padding: 20px 0; }
 .brand-icon {
   width: 36px; height: 36px; border-radius: 11px;
-  background: var(--primary-grad); color: var(--primary-text);
   display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent);
 }
+.brand-icon img { width: 100%; height: 100%; display: block; }
 
 .menu {
   border-right: none;

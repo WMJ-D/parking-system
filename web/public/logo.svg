@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="智泊停车">
+  <defs>
+    <linearGradient id="bg" x1="9" y1="5" x2="57" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8B97FF" />
+      <stop offset=".45" stop-color="#5B6CFF" />
+      <stop offset="1" stop-color="#4150D8" />
+    </linearGradient>
+    <linearGradient id="node" x1="42" y1="40" x2="51" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8FF7F1" />
+      <stop offset="1" stop-color="#2BD9E8" />
+    </linearGradient>
+  </defs>
+
+  <!-- 圆角方形底 -->
+  <rect x="3" y="3" width="58" height="58" rx="17" fill="url(#bg)" />
+  <rect x="3.75" y="3.75" width="56.5" height="56.5" rx="16.25" fill="none"
+        stroke="#FFFFFF" stroke-opacity=".28" stroke-width="1.5" />
+
+  <!-- 停车标志 P -->
+  <path d="M23 47.5V20h9.6a9.75 9.75 0 0 1 0 19.5h-4.4"
+        fill="none" stroke="#FFFFFF" stroke-width="6.2"
+        stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- 智能节点 -->
+  <circle cx="45.8" cy="45.6" r="5.2" fill="url(#node)" />
+  <circle cx="45.8" cy="45.6" r="2" fill="#0B1E5B" fill-opacity=".22" />
+</svg>

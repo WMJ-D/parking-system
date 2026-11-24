@@ -30,7 +30,7 @@
 
       <section class="login-card">
         <div class="logo">
-          <div class="logo-icon"><el-icon :size="28"><Van /></el-icon></div>
+          <div class="logo-icon"><img src="/logo.svg" alt="智泊停车" /></div>
           <div class="logo-text">
             <h2>智泊停车</h2>
             <p>小区智慧停车管理系统</p>
@@ -217,11 +217,11 @@ async function doLogin() {
 .logo { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; }
 .logo-icon {
   width: 52px; height: 52px; border-radius: 16px;
-  background: var(--primary-grad);
-  color: var(--primary-text);
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
   box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 38%, transparent);
 }
+.logo-icon img { width: 100%; height: 100%; display: block; }
 .logo-text h2 {
   margin: 0;
   font-size: 21px;
