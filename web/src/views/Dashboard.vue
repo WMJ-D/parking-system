@@ -92,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import api from '../api'
@@ -195,17 +195,32 @@ watch(currentTheme, async () => {
   renderChart()
 })
 
+function handleResize() {
+  if (chart) chart.resize()
+}
+let chartObserver = null
+
 onMounted(async () => {
   const res = await api.get('/dashboard')
   data.value = res.data
   await nextTick()
   renderChart()
-  window.addEventListener('resize', () => chart && chart.resize())
+  window.addEventListener('resize', handleResize)
+  if (chartRef.value && window.ResizeObserver) {
+    chartObserver = new ResizeObserver(handleResize)
+    chartObserver.observe(chartRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  if (chartObserver) { chartObserver.disconnect(); chartObserver = null }
+  if (chart) { chart.dispose(); chart = null }
 })
 </script>
 
 <style scoped>
-.stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
 .stat { display: flex; align-items: center; gap: 14px; padding: 18px; }
 .stat .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; }
 .i-blue { background: linear-gradient(135deg, #5b6cff, #7a8cff); }
@@ -238,4 +253,12 @@ onMounted(async () => {
 .ls-title { font-weight: 600; color: #b45309; }
 .ls-row { display: flex; gap: 12px; font-size: 13px; padding: 2px 0; }
 .ls-row b { color: #d03030; }
+
+/* AI 侧栏展开后容器变窄：主图表与右侧卡片改为上下堆叠 */
+@container (max-width: 1020px) {
+  :deep(.el-col-16), :deep(.el-col-8) {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
 </style>

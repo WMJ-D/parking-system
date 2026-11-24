@@ -103,7 +103,7 @@
     </el-tabs>
   </div>
 
-  <el-dialog v-model="dlgVisible" :title="form.id ? '编辑车位' : '新增车位'" width="440px">
+  <el-dialog v-model="dlgVisible" append-to-body :title="form.id ? '编辑车位' : '新增车位'" width="440px">
     <el-form label-width="90px">
       <el-form-item label="车位号"><el-input v-model="form.spot_no" placeholder="如 A-021" /></el-form-item>
       <el-form-item label="分区">
@@ -134,7 +134,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="addZoneVisible" title="新增分区" width="400px">
+  <el-dialog v-model="addZoneVisible" append-to-body title="新增分区" width="400px">
     <el-form label-width="80px">
       <el-form-item label="名称"><el-input v-model="zoneForm.name" /></el-form-item>
       <el-form-item label="备注"><el-input v-model="zoneForm.remark" /></el-form-item>

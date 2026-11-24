@@ -80,7 +80,7 @@
       @size-change="onSizeChange" @current-change="load" />
   </div>
 
-  <el-dialog v-model="regVisible" title="车辆未登记，请先登记" width="460px">
+  <el-dialog v-model="regVisible" append-to-body title="车辆未登记，请先登记" width="460px">
     <el-alert type="warning" :closable="false" :title="`车牌 ${regForm.plate_no} 尚未登记，请补全车主信息后入场`" style="margin-bottom: 16px" />
     <el-form label-width="90px">
       <el-form-item label="车牌号"><el-input v-model="regForm.plate_no" disabled /></el-form-item>
@@ -100,7 +100,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="exitVisible" title="出场结算" width="430px">
+  <el-dialog v-model="exitVisible" append-to-body title="出场结算" width="430px">
     <template v-if="exitInfo">
       <div class="exit-plate">{{ exitRec?.plate_no }}</div>
       <el-descriptions :column="1" border>

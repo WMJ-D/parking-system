@@ -20,7 +20,7 @@
     </el-table>
   </div>
 
-  <el-dialog v-model="detailVisible" :title="`${detailPlate} 欠费明细`" width="640px">
+  <el-dialog v-model="detailVisible" append-to-body :title="`${detailPlate} 欠费明细`" width="640px">
     <el-table :data="detail" stripe max-height="380">
       <el-table-column prop="exit_time" label="出场时间" width="165" />
       <el-table-column prop="spot_no" label="车位" width="90">

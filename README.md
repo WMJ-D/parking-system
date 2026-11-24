@@ -45,6 +45,9 @@ Vue3 + Element Plus 前端 / Express + MySQL 后端的小区停车管理系统�
 mysql -uroot -p123456 < db/schema.sql
 mysql -uroot -p123456 < db/seed.sql
 
+# 已有数据库升级 AI 助手（幂等；全新部署已包含在 schema.sql 中，可跳过）
+mysql -uroot -p123456 < db/ai.sql
+
 # 2. 启动后端 (端口 3001)
 cd server && npm install && npm start
 
@@ -88,11 +91,51 @@ cd web && npm install && npm run dev
 | 月卡缴费 | 续费计价、未到期顺延、缴费记录分页 |
 | 收费规则 | 免费时长/小时单价/每日封顶/月卡价格 可配置 |
 | 系统用户 | 管理员可增删账号，操作员无权限访问（403） |
-| 操作日志 | 关键操作留痕，分页 |
+| 操作日志 | 关键操作留痕，分页，支持导出 Excel |
+| AI 助手 | 顶栏入口展开右侧 AI 分栏（左侧系统自动收缩、非浮层遮挡）；SSE 流式回答、自然语言查询数据、办理业务、页面跳转；支持大模型 API 配置 |
+
+## AI 助手
+
+顶栏右侧「AI 助手」按钮展开右侧 AI 对话分栏：左侧系统主内容自动收缩为左右并排布局（展开/收起带过渡动画，窄窗口自动占满），支持用自然语言完成数据查询、业务办理和页面跳转（Agent 能力），回答以 SSE 流式逐字输出。
+
+### 大模型配置
+
+管理员点击面板右上角齿轮，填写 OpenAI 兼容接口（API 地址、API Key、模型名称），「测试连接」通过后保存：
+
+| 服务商 | API 地址 | 模型示例 |
+|---|---|---|
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| Moonshot | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+
+地址填到 `/v1` 即可，系统自动补全 `/chat/completions`。API Key 仅以掩码返回；仅管理员可修改配置，操作员可正常对话。
+
+### 能力清单
+
+| 能力 | 说明 |
+|---|---|
+| 数据查询 | 经营看板、车位/分区、车辆档案、进出记录、欠费汇总/明细、收入报表、月卡缴费、收费规则、操作日志、系统用户（仅管理员） |
+| 业务办理 | 登记车辆、车辆入场（自动分配车位）、车辆出场（自动计费）、月卡续费、结清欠费、新增车位/分区、修改收费规则 |
+| 页面导航 | 说「打开欠费管理」即自动跳转对应页面 |
+| 报表导出 | 收入报表、进出记录、操作日志一键导出 Excel；AI 可直接对话触发浏览器下载 |
+| 多轮对话 | 会话按用户隔离存库，可查看历史、新建/删除会话 |
+| 流式输出 | SSE 逐字返回，首字即显示；工具执行徽章实时出现；支持中途停止生成 |
+
+示例问句：
+
+- 今天经营情况怎么样？
+- 现在有多少空闲车位？
+- 列出 30 天内到期的月卡
+- 帮我登记车辆：京A12345，车主王小明，电话13800138000
+- 把京A12345 开进场 / 办理出场
+- 打开欠费管理页面
+
+实现方式：`POST /api/ai/chat/stream` 以 SSE 返回事件流（`meta` 会话信息 → `delta` 文本增量 → `tool` 工具执行 → `navigate` 跳转 → `download` 文件下载 → `done` 完成），前端用 fetch 流式读取并逐字渲染，支持中途停止；`POST /api/ai/chat` 为非流式兼容接口。Agent 以 OpenAI function calling 驱动工具调用（单次最多 6 轮），工具直接复用业务 SQL 与计费规则；所有写操作都会记录操作日志（`AI 登记车辆` / `AI 车辆出场` 等）。删除类高风险操作未开放给 AI，写操作失败会如实返回原因。导出文件统一由 `exceljs` 生成 `.xlsx`（收入报表 / 进出记录 / 操作日志）。
 
 ## 数据库
 
-`parking_system` 库：users / zones / spots / vehicles / fee_rules / records / payments / logs，见 `db/schema.sql`；演示数据见 `db/seed.sql`。
+`parking_system` 库：users / zones / spots / vehicles / fee_rules / records / payments / logs / ai_config / ai_conversations / ai_messages，见 `db/schema.sql`；演示数据见 `db/seed.sql`，AI 相关表也可用 `db/ai.sql` 单独升级。
 
 ## 计费规则
 

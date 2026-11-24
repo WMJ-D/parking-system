@@ -1,5 +1,11 @@
 <template>
   <div class="page-card">
+    <div class="toolbar">
+      <div class="grow" />
+      <el-button type="primary" :loading="exporting" @click="exportLogs">
+        <el-icon><Download /></el-icon>&nbsp;导出 Excel
+      </el-button>
+    </div>
     <el-table :data="list" stripe>
       <el-table-column prop="created_at" label="时间" width="170" />
       <el-table-column prop="username" label="操作人" width="120" />
@@ -15,11 +21,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import api from '../api'
+import api, { downloadFile } from '../api'
 
 const list = ref([])
 const total = ref(0)
 const query = reactive({ page: 1, size: 10 })
+const exporting = ref(false)
+
 // 切换每页条数：回到第一页重新加载
 function onSizeChange() { query.page = 1; load() }
 
@@ -28,6 +36,16 @@ async function load() {
   list.value = res.data.list
   total.value = res.data.total
 }
+
+async function exportLogs() {
+  exporting.value = true
+  try {
+    await downloadFile('/api/export/logs')
+  } finally {
+    setTimeout(() => { exporting.value = false }, 800)
+  }
+}
+
 onMounted(load)
 </script>
 

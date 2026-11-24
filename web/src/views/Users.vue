@@ -28,7 +28,7 @@
       @size-change="onSizeChange" @current-change="load" />
   </div>
 
-  <el-dialog v-model="resetVisible" title="重置密码" width="400px">
+  <el-dialog v-model="resetVisible" append-to-body title="重置密码" width="400px">
     <el-form label-width="90px">
       <el-form-item label="用户">
         <span>{{ resetUser.name }}（{{ resetUser.username }}）</span>
@@ -43,7 +43,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="dlgVisible" title="新增用户" width="440px">
+  <el-dialog v-model="dlgVisible" append-to-body title="新增用户" width="440px">
     <el-form label-width="80px">
       <el-form-item label="账号"><el-input v-model="form.username" /></el-form-item>
       <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password /></el-form-item>

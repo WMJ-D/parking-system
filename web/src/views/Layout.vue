@@ -27,6 +27,14 @@
           <div class="title">{{ $route.meta.title }}</div>
         </div>
         <div class="header-right">
+          <button
+            class="ai-entry" :class="{ active: aiStore.open }"
+            title="打开 AI 助手（数据查询 / 业务办理 / 页面导航）"
+            @click="aiStore.togglePanel()"
+          >
+            <el-icon :size="16"><MagicStick /></el-icon>
+            <span class="ai-entry-text">AI 助手</span>
+          </button>
           <ThemeSwitcher />
           <el-dropdown @command="onCommand">
             <span class="user">
@@ -52,7 +60,7 @@
       </el-main>
     </el-container>
 
-    <el-dialog v-model="pwdVisible" title="修改密码" width="420px">
+    <el-dialog v-model="pwdVisible" append-to-body title="修改密码" width="420px">
       <el-form label-width="90px">
         <el-form-item label="原密码">
           <el-input v-model="pwdForm.oldPassword" type="password" show-password />
@@ -69,6 +77,8 @@
         <el-button type="primary" @click="changePwd">保存</el-button>
       </template>
     </el-dialog>
+
+    <AiAssistant />
   </el-container>
 </template>
 
@@ -78,6 +88,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../store/user'
 import ThemeSwitcher from '../components/ThemeSwitcher.vue'
+import AiAssistant from '../components/AiAssistant.vue'
+import { useAiStore } from '../store/ai'
 import api from '../api'
 
 const router = useRouter()
@@ -90,6 +102,7 @@ watch(() => route.path, () => {
   if (el) el.scrollTop = 0
 })
 const store = useUserStore()
+const aiStore = useAiStore()
 
 // 菜单收缩状态，记住用户偏好
 const isCollapse = ref(localStorage.getItem('menuCollapse') === '1')
@@ -266,6 +279,32 @@ async function changePwd() {
   color: var(--text);
 }
 
+/* AI 助手入口 */
+.ai-entry {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-weak);
+  border: 1px solid color-mix(in srgb, var(--primary) 34%, transparent);
+  cursor: pointer;
+  transition: background-color .18s, color .18s, border-color .18s, box-shadow .18s, transform .18s;
+}
+.ai-entry:hover,
+.ai-entry.active {
+  background: var(--primary-grad);
+  color: var(--primary-text);
+  border-color: transparent;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+.ai-entry:active { transform: scale(.96); }
+
+@media (max-width: 760px) {
+  .ai-entry-text { display: none; }
+  .ai-entry { padding: 0 10px; }
+}
+
 .user {
   display: flex; align-items: center; gap: 8px;
   padding: 5px 12px 5px 6px;
@@ -288,6 +327,6 @@ async function changePwd() {
 }
 .uname { font-size: 14px; color: var(--text); }
 
-.main { padding: 20px; overflow: auto; background: transparent; }
+.main { padding: 20px; overflow: auto; background: transparent; container-type: inline-size; }
 </style>
 

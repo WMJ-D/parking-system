@@ -5,6 +5,9 @@ const {
   issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForUser, cleanupExpired
 } = require('./auth');
 const pool = require('./db');
+const ExcelJS = require('exceljs');
+const { computeParkingFee } = require('./fee');
+const aiRoutes = require('./ai/routes');
 
 const app = express();
 app.use(cors());
@@ -160,36 +163,90 @@ app.get('/api/reports/income', auth, async (req, res) => {
   res.json({ code: 0, data: { month, daily, total: { cnt: sum[0].cnt, income: Number(sum[0].income) } } });
 });
 
-// ---------- 导出 CSV ----------
-function csv(res, filename, rows) {
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-  res.send('\uFEFF' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'));
+// ---------- 导出 Excel ----------
+function exportStamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 }
 
-app.get('/api/export/records', auth, async (req, res) => {
-  const start = req.query.start || '2000-01-01';
-  const end = req.query.end || '2099-12-31';
-  const [rows] = await pool.query(
-    `SELECT r.*, s.spot_no FROM records r LEFT JOIN spots s ON s.id=r.spot_id
-     WHERE r.entry_time >= ? AND r.entry_time <= ? ORDER BY r.id DESC`, [start, end + ' 23:59:59']);
-  const head = ['车牌号', '车位', '入场时间', '出场时间', '应收', '实收', '状态', '缴费状态', '操作员'];
-  const data = rows.map(r => [r.plate_no, r.spot_no || '', r.entry_time, r.exit_time || '', r.fee, r.actual_fee ?? '',
-    r.status === 'in' ? '在场' : '已出场', { paid: '已缴', free: '免费', unpaid: '未缴' }[r.pay_status] || r.pay_status, r.operator]);
-  await log(req.user.username, '导出记录', `${start}~${end} 共${rows.length}条`);
-  csv(res, `records_${start}_${end}.csv`, [head, ...data]);
+async function sendExcel(res, filename, sheetName, columns, rows) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName, { views: [{ state: 'frozen', ySplit: 1 }] });
+  ws.columns = columns;
+  const head = ws.getRow(1);
+  head.font = { bold: true, size: 11 };
+  head.height = 22;
+  head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDF1F7' } };
+  head.alignment = { vertical: 'middle' };
+  for (const row of rows) ws.addRow(row);
+  const lastCol = String.fromCharCode(64 + columns.length);
+  ws.autoFilter = { from: 'A1', to: `${lastCol}1` };
+
+  const encoded = encodeURIComponent(filename);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+  await wb.xlsx.write(res);
+  res.end();
+}
+
+app.get('/api/export/records', auth, async (req, res, next) => {
+  try {
+    const start = req.query.start || '2000-01-01';
+    const end = req.query.end || '2099-12-31';
+    const [rows] = await pool.query(
+      `SELECT r.*, s.spot_no FROM records r LEFT JOIN spots s ON s.id=r.spot_id
+       WHERE r.entry_time >= ? AND r.entry_time <= ? ORDER BY r.id DESC`, [start, end + ' 23:59:59']);
+    await log(req.user.username, '导出记录', `${start}~${end} 共${rows.length}条`);
+    await sendExcel(res, `进出记录_${start}_${end}.xlsx`, '进出记录', [
+      { header: '车牌号', width: 14 },
+      { header: '车位', width: 12 },
+      { header: '入场时间', width: 20 },
+      { header: '出场时间', width: 20 },
+      { header: '应收(元)', width: 12 },
+      { header: '实收(元)', width: 12 },
+      { header: '状态', width: 10 },
+      { header: '缴费状态', width: 10 },
+      { header: '操作员', width: 14 }
+    ], rows.map(r => [r.plate_no, r.spot_no || '', r.entry_time, r.exit_time || '', Number(r.fee || 0), r.actual_fee ?? '',
+      r.status === 'in' ? '在场' : '已出场', { paid: '已缴', free: '免费', unpaid: '未缴' }[r.pay_status] || r.pay_status, r.operator]));
+  } catch (e) {
+    next(e);
+  }
 });
 
-app.get('/api/export/income', auth, async (req, res) => {
-  const month = req.query.month || new Date().toISOString().slice(0, 7);
-  const [rows] = await pool.query(
-    `SELECT DATE(exit_time) d, COUNT(*) cnt, IFNULL(SUM(actual_fee),0) income
-     FROM records WHERE status='out' AND DATE_FORMAT(exit_time,'%Y-%m')=?
-     GROUP BY DATE(exit_time) ORDER BY d`, [month]);
-  const head = ['日期', '出场车次', '收入(元)'];
-  const data = rows.map(r => [r.d, r.cnt, r.income]);
-  await log(req.user.username, '导出收入报表', month);
-  csv(res, `income_${month}.csv`, [head, ...data]);
+app.get('/api/export/income', auth, async (req, res, next) => {
+  try {
+    const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : new Date().toISOString().slice(0, 7);
+    const [rows] = await pool.query(
+      `SELECT DATE(exit_time) d, COUNT(*) cnt, IFNULL(SUM(actual_fee),0) income
+       FROM records WHERE status='out' AND DATE_FORMAT(exit_time,'%Y-%m')=?
+       GROUP BY DATE(exit_time) ORDER BY d`, [month]);
+    await log(req.user.username, '导出收入报表', month);
+    await sendExcel(res, `收入报表_${month}.xlsx`, '收入报表', [
+      { header: '日期', width: 14 },
+      { header: '出场车次', width: 12 },
+      { header: '收入(元)', width: 14 }
+    ], rows.map(r => [String(r.d).slice(0, 10), Number(r.cnt), Number(r.income)]));
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.get('/api/export/logs', auth, async (req, res, next) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10000, 1), 50000);
+    const [rows] = await pool.query(
+      'SELECT created_at, username, action, detail FROM logs ORDER BY id DESC LIMIT ?', [limit]);
+    await log(req.user.username, '导出操作日志', `共${rows.length}条`);
+    await sendExcel(res, `操作日志_${exportStamp()}.xlsx`, '操作日志', [
+      { header: '时间', width: 20 },
+      { header: '操作人', width: 14 },
+      { header: '操作', width: 18 },
+      { header: '详情', width: 60 }
+    ], rows.map(r => [r.created_at, r.username, r.action, r.detail || '']));
+  } catch (e) {
+    next(e);
+  }
 });
 
 // ---------- 车位 ----------
@@ -335,38 +392,6 @@ app.delete('/api/vehicles/:id', auth, async (req, res) => {
 });
 
 // ---------- 进出场 ----------
-// 计费：免费时长只扣一次；超过后按小时向上取整，每日封顶按"每24小时"分段
-function calcFee(hours, rule) {
-  const freeH = Number(rule.free_minutes) / 60;
-  const price = Number(rule.price_per_hour);
-  const cap = Number(rule.daily_cap);
-  const remaining = hours - freeH;
-  if (remaining <= 0) return 0;
-  const fullDays = Math.floor(remaining / 24);
-  const remainder = remaining - fullDays * 24;
-  return fullDays * cap + Math.min(Math.ceil(remainder) * price, cap);
-}
-
-// 综合计费：处理月卡跨期 —— 卡覆盖时段免费，过期后时段正常计费
-function computeParkingFee(rec, veh, rule, now = Date.now()) {
-  const entry = new Date(rec.entry_time).getTime();
-  const hours = (now - entry) / 3600000;
-  let fee = calcFee(hours, rule);
-  let free = false;          // 全程免费（月卡覆盖至今）
-  let cardCoveredUntil = null; // 部分覆盖：卡覆盖到该时刻，之后计费
-  const card = veh && veh.monthly_card === 1 && veh.card_expire
-    ? new Date(veh.card_expire + ' 23:59:59').getTime() : null;
-  if (card !== null) {
-    if (card >= now) {
-      fee = 0; free = true;
-    } else if (card > entry) {
-      fee = calcFee((now - card) / 3600000, rule);
-      cardCoveredUntil = veh.card_expire + ' 23:59:59';
-    }
-    // 卡在入场前就已过期：全程计费（默认逻辑）
-  }
-  return { fee, free, hours, cardCoveredUntil };
-}
 
 app.get('/api/records', auth, async (req, res) => {
   const { status, keyword, start, end, page = 1, size = 10 } = req.query;
@@ -570,6 +595,9 @@ app.get('/api/logs', auth, async (req, res) => {
     [Number(size), (page - 1) * Number(size)]);
   res.json({ code: 0, data: { list: rows, total } });
 });
+
+// ---------- AI 助手 ----------
+app.use('/api/ai', aiRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`parking-server listening on http://localhost:${PORT}`));

@@ -63,7 +63,7 @@
       @size-change="onSizeChange" @current-change="load" />
   </div>
 
-  <el-dialog v-model="dlgVisible" :title="form.id ? '编辑车辆' : '登记车辆'" width="480px">
+  <el-dialog v-model="dlgVisible" append-to-body :title="form.id ? '编辑车辆' : '登记车辆'" width="480px">
     <el-form label-width="90px">
       <el-form-item label="车牌号"><el-input v-model="form.plate_no" placeholder="如 京A12345" /></el-form-item>
       <el-form-item label="车主姓名"><el-input v-model="form.owner_name" /></el-form-item>

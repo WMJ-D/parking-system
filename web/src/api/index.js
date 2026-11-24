@@ -189,4 +189,19 @@ export function ensureFreshToken() {
   return Promise.resolve(token)
 }
 
+/* ---------- 文件下载（token 走 query，浏览器直连） ---------- */
+export async function downloadFile(url) {
+  if (!url) return
+  const fresh = await ensureFreshToken()
+  const token = fresh || getAccess() || ''
+  const sep = String(url).includes('?') ? '&' : '?'
+  const a = document.createElement('a')
+  a.href = `${url}${sep}token=${encodeURIComponent(token)}`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  // 延迟移除，避免部分浏览器在下载启动阶段取消任务
+  setTimeout(() => { if (a.parentNode) a.parentNode.removeChild(a) }, 1000)
+}
+
 export default api

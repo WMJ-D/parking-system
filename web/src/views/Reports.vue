@@ -32,9 +32,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
-import api, { ensureFreshToken } from '../api'
+import api, { downloadFile } from '../api'
 import { currentTheme } from '../composables/useTheme'
 
 const month = ref(new Date().toISOString().slice(0, 7))
@@ -109,18 +109,9 @@ watch(currentTheme, async () => {
   renderChart()
 })
 
-// 导出走浏览器直连，无法携带请求头，因此把 token 放 query。
-// 先确保 access token 新鲜，避免点导出时刚好过期拿到 401。
+// 导出走浏览器直连，token 由 downloadFile 统一拼接到 query
 async function openExport(url) {
-  const fresh = await ensureFreshToken()
-  const token = fresh || localStorage.getItem('token') || ''
-  const a = document.createElement('a')
-  a.href = `${url}&token=${encodeURIComponent(token)}`
-  a.target = '_blank'
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+  await downloadFile(url)
 }
 
 function exportIncome() {
@@ -132,14 +123,29 @@ function exportRecords() {
   openExport(`/api/export/records?start=${start}&end=${end}`)
 }
 
+function handleResize() {
+  if (chart) chart.resize()
+}
+let chartObserver = null
+
 onMounted(() => {
   load()
-  window.addEventListener('resize', () => chart && chart.resize())
+  window.addEventListener('resize', handleResize)
+  if (chartRef.value && window.ResizeObserver) {
+    chartObserver = new ResizeObserver(handleResize)
+    chartObserver.observe(chartRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  if (chartObserver) { chartObserver.disconnect(); chartObserver = null }
+  if (chart) { chart.dispose(); chart = null }
 })
 </script>
 
 <style scoped>
-.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px; }
 .mini {
   background: var(--surface-2);
   backdrop-filter: var(--blur-sm);
